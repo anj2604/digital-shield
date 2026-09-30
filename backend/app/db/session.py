@@ -7,3 +7,5 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 from app.models.sms_message import SmsMessage  # noqa: F401
+
+from app.models.call import Call  # noqa: F401
