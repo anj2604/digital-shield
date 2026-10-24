@@ -17,3 +17,6 @@ local.properties
 .env
 *.db
 evidence_vault/
+
+# Android build output
+**/build/
