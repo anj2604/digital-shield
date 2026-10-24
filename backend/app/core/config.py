@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://shield:shield_dev@localhost:5433/digital_shield"
+    mongo_uri: str = "mongodb://localhost:27017"
+    mongo_db: str = "digital_shield"
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = "shield_dev"

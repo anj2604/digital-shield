@@ -20,3 +20,4 @@ evidence_vault/
 
 # Android build output
 **/build/
+android-app/.idea/
