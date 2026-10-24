@@ -4,10 +4,15 @@ import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
 import retrofit2.http.POST
 
-data class SmsRequest(val sender: String, val body: String)
+data class SmsRequest(
+    val sender: String,
+    val body: String,
+    @SerializedName("is_known_contact") val isKnownContact: Boolean
+)
 
 data class SmsResponse(
-    val id: Int,
+    val id: String?,
+    val stored: Boolean,
     val sender: String,
     val body: String,
     @SerializedName("received_at") val receivedAt: String,

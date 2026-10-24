@@ -21,12 +21,14 @@ class SmsReceiver : BroadcastReceiver() {
 
         val sender = messages[0].originatingAddress ?: "unknown"
         val body = messages.joinToString("") { it.messageBody ?: "" }
+        val appContext = context.applicationContext
 
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = ApiClient.smsApi.analyzeSms(SmsRequest(sender, body))
-                Log.d("DigitalShield", "risk=${result.riskScore} band=${result.riskBand} indicators=${result.indicators}")
+                val known = ContactsHelper.isSavedContact(appContext, sender)
+                val result = ApiClient.smsApi.analyzeSms(SmsRequest(sender, body, known))
+                Log.d("DigitalShield", "risk=${result.riskScore} band=${result.riskBand} known=$known stored=${result.stored}")
                 ResultStore.add(result)
             } catch (e: Exception) {
                 Log.e("DigitalShield", "Analyze failed", e)

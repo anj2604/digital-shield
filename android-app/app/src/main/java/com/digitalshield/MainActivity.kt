@@ -54,24 +54,28 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var hasPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) ==
-                    PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        hasPermission = it
+    fun granted(p: String) =
+        ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
+
+    var smsOn by remember { mutableStateOf(granted(Manifest.permission.RECEIVE_SMS)) }
+    var contactsOn by remember { mutableStateOf(granted(Manifest.permission.READ_CONTACTS)) }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
+        smsOn = res[Manifest.permission.RECEIVE_SMS] ?: smsOn
+        contactsOn = res[Manifest.permission.READ_CONTACTS] ?: contactsOn
     }
     LaunchedEffect(Unit) {
-        if (!hasPermission) launcher.launch(Manifest.permission.RECEIVE_SMS)
+        val missing = listOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_CONTACTS)
+            .filter { !granted(it) }
+        if (missing.isNotEmpty()) launcher.launch(missing.toTypedArray())
     }
 
     val results by ResultStore.results.collectAsState()
 
     Column(modifier.padding(16.dp)) {
         Text("Digital Shield", style = MaterialTheme.typography.headlineMedium)
-        Text(if (hasPermission) "SMS protection: ON" else "SMS protection: OFF (permission needed)")
+        Text(if (smsOn) "SMS protection: ON" else "SMS protection: OFF (permission needed)")
+        Text(if (contactsOn) "Contact check: ON" else "Contact check: OFF (all senders treated as unknown)")
         Spacer(Modifier.height(16.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(results) { SmsResultCard(it) }
@@ -94,6 +98,10 @@ fun SmsResultCard(r: SmsResponse) {
             Text(r.body, maxLines = 3)
             Spacer(Modifier.height(8.dp))
             Text("Indicators: ${r.indicators.joinToString()}")
+            Text(
+                if (r.stored) "Unknown sender: stored as evidence" else "Saved contact: analysed, not stored",
+                color = Color(0xFF6B7A8F)
+            )
         }
     }
 }
