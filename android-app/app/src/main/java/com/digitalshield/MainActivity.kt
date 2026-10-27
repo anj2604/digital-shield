@@ -2,9 +2,12 @@ package com.digitalshield
 
 import android.Manifest
 import android.app.role.RoleManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -36,11 +39,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.digitalshield.data.CallStore
 import com.digitalshield.data.ResultStore
+import com.digitalshield.data.ScreenshotStore
 import com.digitalshield.data.remote.CallResult
+import com.digitalshield.data.remote.ScreenshotResult
 import com.digitalshield.data.remote.SmsResponse
+import com.digitalshield.services.ScreenshotProcessor
 import com.digitalshield.ui.theme.DigitalShieldTheme
+import kotlinx.coroutines.launch
+import androidx.compose.material3.ButtonDefaults
+
+private const val MAX_SCREENSHOTS = 10
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,9 +60,55 @@ class MainActivity : ComponentActivity() {
         setContent {
             DigitalShieldTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    HomeScreen(Modifier.padding(innerPadding))
+                    HomeScreen(Modifier.padding(innerPadding), onAnalyseScreenshots = { analyseScreenshots(it) })
                 }
             }
+        }
+        handleShareIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleShareIntent(intent)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun handleShareIntent(intent: Intent?) {
+        val uris: List<Uri> = when (intent?.action) {
+            Intent.ACTION_SEND -> listOfNotNull(
+                if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                else intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            )
+            Intent.ACTION_SEND_MULTIPLE ->
+                (if (Build.VERSION.SDK_INT >= 33) intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                else intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)) ?: emptyList()
+            else -> emptyList()
+        }
+        if (uris.isNotEmpty()) analyseScreenshots(uris)
+    }
+
+    private fun analyseScreenshots(uris: List<Uri>) {
+        val batch = uris.take(MAX_SCREENSHOTS)
+        if (uris.size > MAX_SCREENSHOTS) {
+            Toast.makeText(this, "Analysing the first $MAX_SCREENSHOTS screenshots", Toast.LENGTH_SHORT).show()
+        }
+        lifecycleScope.launch {
+            ScreenshotStore.setBusy(true)
+            var failed = 0
+            for (uri in batch) {   // one at a time: each gets its own hash and custody entry
+                try {
+                    ScreenshotStore.add(ScreenshotProcessor.process(applicationContext, uri))
+                } catch (e: Exception) {
+                    failed++
+                    android.util.Log.e("DigitalShield", "Screenshot failed", e)
+                    Toast.makeText(this@MainActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+            ScreenshotStore.setBusy(false)
+            val ok = batch.size - failed
+            Toast.makeText(this@MainActivity,
+                "Analysed $ok of ${batch.size} screenshot(s)" + if (failed > 0) " ($failed failed)" else "",
+                Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -64,7 +121,7 @@ fun bandColor(band: String): Color = when (band) {
 }
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(modifier: Modifier = Modifier, onAnalyseScreenshots: (List<Uri>) -> Unit) {
     val context = LocalContext.current
     fun granted(p: String) =
         ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
@@ -72,6 +129,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val wanted = buildList {
         add(Manifest.permission.RECEIVE_SMS)
         add(Manifest.permission.READ_CONTACTS)
+        add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.ANSWER_PHONE_CALLS)
         if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
     }
     var smsOn by remember { mutableStateOf(granted(Manifest.permission.RECEIVE_SMS)) }
@@ -92,8 +151,15 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         screeningOn = screeningHeld()
     }
 
+    // Opens the file chooser; long-press to select several images
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNotEmpty()) onAnalyseScreenshots(uris)
+    }
+
     val smsResults by ResultStore.results.collectAsState()
     val callResults by CallStore.calls.collectAsState()
+    val shots by ScreenshotStore.shots.collectAsState()
+    val busy by ScreenshotStore.busy.collectAsState()
 
     LazyColumn(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -110,7 +176,23 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         }
                     }) { Text("Enable call screening") }
                 }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { picker.launch("image/*") }, enabled = !busy) {
+                    Text(if (busy) "Analysing screenshots…" else "Analyse screenshots")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { context.startActivity(SafeExitActivity.intent(context, null, null, -1)) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))) {
+                    Text("Safe Exit")
+                }
             }
+        }
+
+        item { TrustedContactCard() }
+
+        if (shots.isNotEmpty()) {
+            item { Text("Screenshots", style = MaterialTheme.typography.titleLarge) }
+            items(shots) { ScreenshotCard(it) }
         }
         if (callResults.isNotEmpty()) {
             item { Text("Calls", style = MaterialTheme.typography.titleLarge) }
@@ -119,6 +201,20 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         if (smsResults.isNotEmpty()) {
             item { Text("Messages", style = MaterialTheme.typography.titleLarge) }
             items(smsResults) { SmsResultCard(it) }
+        }
+    }
+}
+
+@Composable
+fun ScreenshotCard(r: ScreenshotResult) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Screenshot: ${r.riskBand} — ${r.riskScore}/100", color = bandColor(r.riskBand),
+                style = MaterialTheme.typography.titleMedium)
+            Text("Text found: ${r.ocrText.ifBlank { "(none)" }}", maxLines = 3)
+            Spacer(Modifier.height(8.dp))
+            Text("Indicators: ${r.indicators.joinToString().ifEmpty { "none" }}")
+            Text("Evidence SHA-256: ${r.sha256.take(16)}…", color = Color(0xFF6B7A8F))
         }
     }
 }

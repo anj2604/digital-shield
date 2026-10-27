@@ -16,4 +16,6 @@ object ApiClient {
 
     val smsApi: SmsApi by lazy { retrofit.create(SmsApi::class.java) }
     val callApi: CallApi by lazy { retrofit.create(CallApi::class.java) }
+    val screenshotApi: ScreenshotApi by lazy { retrofit.create(ScreenshotApi::class.java) }
+
 }
