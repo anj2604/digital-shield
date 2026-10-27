@@ -7,6 +7,7 @@ from app.services.nlp.ioc_extractor import extract_iocs
 from app.services.risk_engine.scorer import calculate_risk, risk_band
 from app.services.forensics.hashing import now_ms, sms_fingerprint
 from app.services.forensics.custody import log_custody
+from app.services.threat_intel.lookup import any_reported, learn_from
 
 router = APIRouter(prefix="/sms", tags=["sms"])
 
@@ -16,6 +17,8 @@ def analyze_sms(payload: SmsIn, db: Database = Depends(get_db)):
     iocs = extract_iocs(payload.body)
     if iocs["urls"]:
         indicators.append("suspicious_url")
+    if any_reported(db, payload.sender, iocs):          # FR11
+        indicators.append("reported_ioc")
     score = calculate_risk(indicators)
     band = risk_band(score)
     now = now_ms()
@@ -31,15 +34,14 @@ def analyze_sms(payload: SmsIn, db: Database = Depends(get_db)):
     if not payload.is_known_contact:
         digest = sms_fingerprint(payload.sender, payload.body, now)
         doc = {
-            "sender": payload.sender,
-            "body": payload.body,
-            "received_at": now,
+            "sender": payload.sender, "body": payload.body, "received_at": now,
             "analysis": {"indicators": indicators, "risk_score": score, "risk_band": band},
-            "iocs": iocs,
-            "sha256": digest,
+            "iocs": iocs, "sha256": digest,
         }
         inserted = db.sms_messages.insert_one(doc)
-        log_custody(db, "sms", inserted.inserted_id, "received", digest)  # FR14
+        log_custody(db, "sms", inserted.inserted_id, "received", digest)   # FR14
+        if band in ("HIGH", "CRITICAL"):
+            learn_from(db, payload.sender, iocs)                            # FR11
         result.update({"id": str(inserted.inserted_id), "stored": True, "sha256": digest})
     return result
 

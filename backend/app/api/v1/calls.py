@@ -33,7 +33,7 @@ def analyze_call(payload: CallIn, db: Database = Depends(get_db)):
         }
 
     indicators = ["unknown_sender"]
-    if is_reported(payload.phone_number):
+    if is_reported(db, "phone", payload.phone_number):
         indicators.append("reported_ioc")
     score = calculate_risk(indicators)
     band = risk_band(score)
