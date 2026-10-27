@@ -11,6 +11,7 @@ from app.services.nlp.ioc_extractor import extract_iocs
 from app.services.risk_engine.scorer import calculate_risk, risk_band
 from app.services.forensics.hashing import sha256_bytes, now_ms
 from app.services.forensics.custody import log_custody
+from app.graph.service import get_graph
 
 router = APIRouter(prefix="/screenshots", tags=["screenshots"])
 
@@ -25,7 +26,7 @@ def _to_out(d):
 
 @router.post("/", response_model=ScreenshotOut)
 def upload_screenshot(file: UploadFile = File(...), ocr_text: str = Form(""),
-                      db: Database = Depends(get_db)):
+                      db: Database = Depends(get_db), graph=Depends(get_graph)):
     data = file.file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Empty file")
@@ -49,6 +50,7 @@ def upload_screenshot(file: UploadFile = File(...), ocr_text: str = Form(""),
     inserted = db.screenshots.insert_one(doc)
     doc["_id"] = inserted.inserted_id
     log_custody(db, "screenshot", inserted.inserted_id, "received", digest)  # FR14
+    graph.link("screenshot", str(inserted.inserted_id), band, score, iocs)   # FR16
     return _to_out(doc)
 
 @router.get("/", response_model=list[ScreenshotOut])

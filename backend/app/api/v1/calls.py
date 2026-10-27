@@ -6,6 +6,7 @@ from pymongo.database import Database
 from app.db.mongo import get_db
 from app.schemas.call import CallIn, CallOut
 from app.services.threat_intel.lookup import is_reported
+from app.graph.service import get_graph
 from app.services.risk_engine.scorer import calculate_risk, risk_band
 
 router = APIRouter(prefix="/calls", tags=["calls"])
@@ -21,7 +22,7 @@ def _to_out(d):
     }
 
 @router.post("/", response_model=CallOut)
-def analyze_call(payload: CallIn, db: Database = Depends(get_db)):
+def analyze_call(payload: CallIn, db: Database = Depends(get_db), graph=Depends(get_graph)):
     now = datetime.now(timezone.utc)
 
     # FR6: saved contacts are let through and never stored or recorded
@@ -49,6 +50,7 @@ def analyze_call(payload: CallIn, db: Database = Depends(get_db)):
     }
     inserted = db.calls.insert_one(doc)
     doc["_id"] = inserted.inserted_id
+    graph.link("call", str(inserted.inserted_id), band, score, {}, sender=payload.phone_number)   # FR16
     return _to_out(doc)
 
 @router.get("/", response_model=list[CallOut])

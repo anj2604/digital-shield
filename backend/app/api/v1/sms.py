@@ -8,11 +8,12 @@ from app.services.risk_engine.scorer import calculate_risk, risk_band
 from app.services.forensics.hashing import now_ms, sms_fingerprint
 from app.services.forensics.custody import log_custody
 from app.services.threat_intel.lookup import any_reported, learn_from
+from app.graph.service import get_graph
 
 router = APIRouter(prefix="/sms", tags=["sms"])
 
 @router.post("/", response_model=SmsOut)
-def analyze_sms(payload: SmsIn, db: Database = Depends(get_db)):
+def analyze_sms(payload: SmsIn, db: Database = Depends(get_db), graph=Depends(get_graph)):
     indicators = classify_text(payload.body)
     iocs = extract_iocs(payload.body)
     if iocs["urls"]:
@@ -40,6 +41,7 @@ def analyze_sms(payload: SmsIn, db: Database = Depends(get_db)):
         }
         inserted = db.sms_messages.insert_one(doc)
         log_custody(db, "sms", inserted.inserted_id, "received", digest)   # FR14
+        graph.link("sms", str(inserted.inserted_id), band, score, iocs, sender=payload.sender)   # FR16
         if band in ("HIGH", "CRITICAL"):
             learn_from(db, payload.sender, iocs)                            # FR11
         result.update({"id": str(inserted.inserted_id), "stored": True, "sha256": digest})

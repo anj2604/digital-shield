@@ -1,13 +1,4 @@
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: shield
-      POSTGRES_PASSWORD: shield_dev
-      POSTGRES_DB: digital_shield
-    ports: ["5433:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
-
   mongo:
     image: mongo:7
     ports: ["27017:27017"]
@@ -17,10 +8,12 @@ services:
     image: neo4j:5
     environment:
       NEO4J_AUTH: neo4j/shield_dev
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 256m
     ports: ["7474:7474", "7687:7687"]
     volumes: ["neo4jdata:/data"]
 
 volumes:
-  pgdata:
   mongodata:
   neo4jdata:
