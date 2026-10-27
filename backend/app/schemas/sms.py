@@ -10,6 +10,7 @@ class SmsIn(BaseModel):
 class SmsOut(BaseModel):
     id: Optional[str] = None
     stored: bool
+    sha256: Optional[str] = None
     sender: str
     body: str
     received_at: datetime

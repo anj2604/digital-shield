@@ -1,8 +1,11 @@
 import mongomock
+import mongomock.gridfs
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.mongo import get_db
+
+mongomock.gridfs.enable_gridfs_integration()
 
 @pytest.fixture
 def mock_db():
