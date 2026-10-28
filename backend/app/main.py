@@ -6,6 +6,7 @@ from app.api.v1.screenshots import router as screenshots_router
 from app.api.v1.evidence import router as evidence_router
 from app.api.v1.threat_intel import router as threat_intel_router
 from app.api.v1.graph import router as graph_router
+from app.api.v1.cases import router as cases_router
 from app.db.mongo import get_db
 from app.graph.service import get_graph
 from app.services.threat_intel.lookup import seed_defaults
@@ -39,3 +40,4 @@ app.include_router(screenshots_router)
 app.include_router(evidence_router)
 app.include_router(threat_intel_router)
 app.include_router(graph_router)
+app.include_router(cases_router)

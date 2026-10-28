@@ -4,6 +4,7 @@ annotated-types==0.8.0
 anyio==4.15.1
 av==18.1.0
 certifi==2026.10.23
+charset-normalizer==3.5.2
 click==8.5.0
 ctranslate2==4.8.3
 dnspython==2.9.0
@@ -29,6 +30,7 @@ neo4j==6.4.1
 numpy==2.4.6
 onnxruntime==1.31.0
 packaging==26.3
+pillow==13.0.0
 pluggy==1.6.0
 protobuf==7.36.2
 psycopg2-binary==2.9.13
@@ -42,6 +44,7 @@ python-dotenv==1.2.3
 python-multipart==0.0.32
 pytz==2026.5
 PyYAML==6.0.3
+reportlab==5.1.0
 sentinels==1.1.1
 SQLAlchemy==2.1.1
 starlette==1.7.0

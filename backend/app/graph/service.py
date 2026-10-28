@@ -96,6 +96,15 @@ class Neo4jGraph:
             ln = s.run("MATCH ()-[r:APPEARS_IN]->() RETURN count(r) AS c").single()["c"]
         return {"evidence": ev, "iocs": io, "links": ln}
 
+    def link_case(self, case_id, evidence_keys):
+        try:
+            with self.driver.session() as s:
+                s.run("MERGE (c:Case {key: $ckey}) SET c.id = $cid WITH c UNWIND $keys AS k "
+                      "MATCH (e:Evidence {key: k}) MERGE (e)-[:PART_OF]->(c)",
+                      ckey=f"case:{case_id}", cid=case_id, keys=evidence_keys)
+        except Exception as e:
+            log.warning("Graph case link skipped: %s", e)
+
 class InMemoryGraph:
     """Same behaviour as Neo4jGraph, used in tests."""
     def __init__(self):
@@ -128,6 +137,9 @@ class InMemoryGraph:
 
     def stats(self):
         return {"evidence": len(self.evidence), "iocs": len(self.iocs), "links": len(self.links)}
+
+    def link_case(self, case_id, evidence_keys):
+        self.__dict__.setdefault("cases", {})[case_id] = list(evidence_keys)
 
 _graph = None
 
