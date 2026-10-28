@@ -3,6 +3,8 @@ package com.digitalshield.data.remote
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.GET
+import retrofit2.http.Query
 
 data class SmsRequest(
     val sender: String,
@@ -25,4 +27,6 @@ data class SmsResponse(
 interface SmsApi {
     @POST("sms/")
     suspend fun analyzeSms(@Body request: SmsRequest): SmsResponse
+    @GET("sms/")
+    suspend fun list(@Query("limit") limit: Int = 100): List<SmsResponse>
 }

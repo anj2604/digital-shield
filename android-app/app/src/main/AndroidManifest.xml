@@ -48,6 +48,8 @@
         <activity
             android:name=".SafeExitActivity"
             android:exported="false" />
+        <activity android:name=".ReportViewerActivity" android:exported="false" />
+        <activity android:name=".ReportIncidentActivity" android:exported="false" />
 
         <!-- SMS listener -->
         <receiver

@@ -6,6 +6,8 @@ import okhttp3.RequestBody
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.GET
+import retrofit2.http.Query
 
 data class ScreenshotResult(
     val id: String,
@@ -25,4 +27,6 @@ interface ScreenshotApi {
         @Part file: MultipartBody.Part,
         @Part("ocr_text") ocrText: RequestBody
     ): ScreenshotResult
+    @GET("screenshots/")
+    suspend fun list(@Query("limit") limit: Int = 100): List<ScreenshotResult>
 }

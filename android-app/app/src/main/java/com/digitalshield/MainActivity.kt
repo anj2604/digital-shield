@@ -50,6 +50,7 @@ import com.digitalshield.services.ScreenshotProcessor
 import com.digitalshield.ui.theme.DigitalShieldTheme
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.rememberCoroutineScope
 
 private const val MAX_SCREENSHOTS = 10
 
@@ -156,6 +157,9 @@ fun HomeScreen(modifier: Modifier = Modifier, onAnalyseScreenshots: (List<Uri>) 
         if (uris.isNotEmpty()) onAnalyseScreenshots(uris)
     }
 
+    val scope = rememberCoroutineScope()
+    var reporting by remember { mutableStateOf(false) }
+
     val smsResults by ResultStore.results.collectAsState()
     val callResults by CallStore.calls.collectAsState()
     val shots by ScreenshotStore.shots.collectAsState()
@@ -184,6 +188,10 @@ fun HomeScreen(modifier: Modifier = Modifier, onAnalyseScreenshots: (List<Uri>) 
                 Button(onClick = { context.startActivity(SafeExitActivity.intent(context, null, null, -1)) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))) {
                     Text("Safe Exit")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { context.startActivity(Intent(context, ReportIncidentActivity::class.java)) }) {
+                    Text("Report incident (PDF)")
                 }
             }
         }
