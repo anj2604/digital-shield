@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
 from pymongo.database import Database
 from app.db.mongo import get_db
+from app.core.auth import require_investigator
 
 router = APIRouter(tags=["stats"])
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[Depends(require_investigator)])
 def stats(db: Database = Depends(get_db)):
     bands = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0}
     for d in db.sms_messages.find({}, {"analysis.risk_band": 1}):

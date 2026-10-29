@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from pymongo.database import Database
 from app.db.mongo import get_db
 from app.services.forensics.hashing import now_ms
-from app.services.links.scanner import scan
+from app.services.links.scanner import scan, apply_osint
+from app.services.osint.lookup import get_osint
 
 router = APIRouter(prefix="/links", tags=["links"])
 
@@ -15,8 +16,13 @@ class ScanIn(BaseModel):
     source: str = "link"   # "link" or "qr"
 
 @router.post("/scan")
-def scan_link(payload: ScanIn, db: Database = Depends(get_db)):
+def scan_link(payload: ScanIn, db: Database = Depends(get_db), osint=Depends(get_osint)):
     result = scan(payload.input, db)
+    if result["kind"] == "url" and not any(f["code"] == "ip_host" for f in result["findings"]):
+        try:
+            result = apply_osint(result, osint.enrich(result["host"]))   # FR12
+        except Exception:
+            pass   # OSINT is extra evidence; the scan still works without it
     db.link_scans.insert_one({**result, "source": payload.source, "scanned_at": now_ms()})
     return result
 

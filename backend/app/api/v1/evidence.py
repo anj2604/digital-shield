@@ -5,6 +5,7 @@ from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 from app.db.mongo import get_db
+from app.core.auth import require_investigator
 from app.services.forensics.hashing import sha256_bytes, sms_fingerprint
 from app.services.forensics.custody import log_custody
 
@@ -40,7 +41,7 @@ def verify(evidence_type: str, evidence_id: str, db: Database = Depends(get_db))
     return {"evidence_type": evidence_type, "evidence_id": evidence_id,
             "stored_sha256": d["sha256"], "current_sha256": current, "intact": intact}
 
-@router.get("/custody")
+@router.get("/custody", dependencies=[Depends(require_investigator)])
 def custody(evidence_id: Optional[str] = None, limit: int = 100, db: Database = Depends(get_db)):
     query = {"evidence_id": evidence_id} if evidence_id else {}
     return list(db.custody_events.find(query, {"_id": 0}).sort("timestamp", 1).limit(limit))

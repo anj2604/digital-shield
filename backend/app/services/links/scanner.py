@@ -89,3 +89,19 @@ def scan(raw, db=None):
                            or is_reported(db, "domain", host)):
         findings.append(_f("reported", "Reported by other users", 40))
     return _result(text, "url", host, findings, official=official)
+
+
+def apply_osint(result, o):
+    """FR12: OSINT facts add warning signs; they never declare a site malicious alone."""
+    if not o:
+        return result
+    findings = list(result["findings"])
+    age = o.get("age_days")
+    if age is not None and age < 90 and not result.get("official"):
+        findings.append(_f("new_domain", f"Website registered only {age} day(s) ago", 20))
+    if o.get("resolves") is False:
+        findings.append(_f("no_dns", "This website address does not exist (no DNS record)", 10))
+    updated = _result(result["input"], result["kind"], result["host"], findings,
+                      official=result.get("official"))
+    updated["osint"] = {k: o.get(k) for k in ("domain", "created", "age_days", "registrar", "resolves", "has_mx")}
+    return updated
