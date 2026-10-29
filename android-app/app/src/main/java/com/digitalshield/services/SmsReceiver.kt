@@ -23,13 +23,21 @@ class SmsReceiver : BroadcastReceiver() {
         val body = messages.joinToString("") { it.messageBody ?: "" }
         val appContext = context.applicationContext
 
+        // FR18: OTP guard. Warn at once, more strongly if the user is on a call right now
+        if (OtpGuard.looksLikeOtp(body)) {
+            NotificationHelper.showOtpWarning(appContext, OtpGuard.isInCall(appContext))
+        }
+
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val known = ContactsHelper.isSavedContact(appContext, sender)
                 val result = ApiClient.smsApi.analyzeSms(SmsRequest(sender, body, known))
                 Log.d("DigitalShield", "risk=${result.riskScore} band=${result.riskBand} known=$known stored=${result.stored}")
-                ResultStore.add(result)
+                // Saved contacts: only surface the result if it looks dangerous
+                if (!known || result.riskBand == "HIGH" || result.riskBand == "CRITICAL") {
+                    ResultStore.add(result)
+                }
             } catch (e: Exception) {
                 Log.e("DigitalShield", "Analyze failed", e)
             } finally {

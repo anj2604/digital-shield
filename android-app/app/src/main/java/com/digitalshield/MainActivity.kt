@@ -51,6 +51,8 @@ import com.digitalshield.ui.theme.DigitalShieldTheme
 import kotlinx.coroutines.launch
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.OutlinedButton
 
 private const val MAX_SCREENSHOTS = 10
 
@@ -192,6 +194,15 @@ fun HomeScreen(modifier: Modifier = Modifier, onAnalyseScreenshots: (List<Uri>) 
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = { context.startActivity(Intent(context, ReportIncidentActivity::class.java)) }) {
                     Text("Report incident (PDF)")
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { context.startActivity(Intent(context, LinkScanActivity::class.java)) }) {
+                        Text("Scan link / QR")
+                    }
+                    OutlinedButton(onClick = { context.startActivity(Intent(context, SimOtpActivity::class.java)) }) {
+                        Text("OTP & SIM safety")
+                    }
                 }
             }
         }

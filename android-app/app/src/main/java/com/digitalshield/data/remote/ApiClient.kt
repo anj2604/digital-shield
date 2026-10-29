@@ -18,4 +18,6 @@ object ApiClient {
     val callApi: CallApi by lazy { retrofit.create(CallApi::class.java) }
     val screenshotApi: ScreenshotApi by lazy { retrofit.create(ScreenshotApi::class.java) }
     val caseApi: CaseApi by lazy { retrofit.create(CaseApi::class.java) }
+
+    val linkApi: LinkApi by lazy { retrofit.create(LinkApi::class.java) }
 }
