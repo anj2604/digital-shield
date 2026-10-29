@@ -58,7 +58,7 @@ export default function GraphView({ initial }) {
                     <div className="mb-2 text-muted">
                         {g.summary.evidence_count} evidence item(s), {g.summary.linked_iocs} linked indicator(s). Click a green node to explore from it.
                     </div>
-                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="bg-white border rounded">
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="bg-body border rounded">
                         {g.edges.map((e, i) =>
                             pos[e.source] && pos[e.target] ? (
                                 <line key={i} x1={pos[e.source].x} y1={pos[e.source].y} x2={pos[e.target].x} y2={pos[e.target].y}
@@ -75,8 +75,7 @@ export default function GraphView({ initial }) {
                                 <g key={n.id} style={{ cursor: n.kind === "ioc" ? "pointer" : "default" }}
                                     onClick={() => { if (n.kind === "ioc") { setType(n.type); setValue(n.value); load(n.type, n.value); } }}>
                                     <circle cx={p.x} cy={p.y} r={isCenter ? 26 : 20} fill={color} />
-                                    <text x={p.x} y={p.y + (isCenter ? 44 : 36)} textAnchor="middle" fontSize="12">
-                                        {label.length > 28 ? label.slice(0, 27) + "…" : label}
+                                    <text x={p.x} y={p.y + (isCenter ? 44 : 36)} textAnchor="middle" fontSize="12" fill="currentColor">                                        {label.length > 28 ? label.slice(0, 27) + "…" : label}
                                     </text>
                                 </g>
                             );

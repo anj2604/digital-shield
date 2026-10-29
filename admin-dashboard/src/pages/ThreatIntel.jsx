@@ -39,7 +39,7 @@ export default function ThreatIntel({ onOpenGraph }) {
             {msg && <div className="small text-muted mb-3">{msg}</div>}
 
             {!rows ? <p>Loading…</p> : (
-                <table className="table table-sm bg-white">
+                <table className="table table-sm">
                     <thead><tr><th>Type</th><th>Value</th><th>Reports</th><th>Sources</th><th>Last seen</th><th></th></tr></thead>
                     <tbody>
                         {rows.map((r) => (

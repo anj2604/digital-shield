@@ -6,6 +6,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from pymongo.database import Database
 from app.db.mongo import get_db
+from app.core.auth import require_investigator
 from app.graph.service import get_graph
 from app.services.forensics.custody import log_custody
 from app.services.forensics.hashing import now_ms, sha256_bytes, sms_fingerprint
@@ -105,11 +106,11 @@ def create_case(payload: CaseIn, db: Database = Depends(get_db), graph=Depends(g
     graph.link_case(cid, [f"{it['type']}:{it['id']}" for it in items])   # FR16
     return _case_out(cid, doc)
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_investigator)])
 def list_cases(limit: int = 50, db: Database = Depends(get_db)):
     return [_case_out(str(d["_id"]), d) for d in db.cases.find().sort("created_at", -1).limit(limit)]
 
-@router.get("/{case_id}")
+@router.get("/{case_id}", dependencies=[Depends(require_investigator)])
 def get_case(case_id: str, db: Database = Depends(get_db)):
     case = db.cases.find_one({"_id": _oid(case_id)})
     if not case:
