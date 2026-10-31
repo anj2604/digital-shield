@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleShareIntent(intent)
+        FileGuardActivity.resumeAutoScan(this)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -203,6 +204,13 @@ fun HomeScreen(modifier: Modifier = Modifier, onAnalyseScreenshots: (List<Uri>) 
                     OutlinedButton(onClick = { context.startActivity(Intent(context, SimOtpActivity::class.java)) }) {
                         Text("OTP & SIM safety")
                     }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(context, FileGuardActivity::class.java)) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Scan & open files safely")
                 }
             }
         }
