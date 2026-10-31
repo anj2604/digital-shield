@@ -41,23 +41,25 @@ import com.digitalshield.data.remote.ReportRequest
 import com.digitalshield.services.QrDecoder
 import com.digitalshield.ui.theme.DigitalShieldTheme
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.LaunchedEffect
 
 class LinkScanActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initial = intent.getStringExtra(EXTRA_INPUT)
         setContent {
             DigitalShieldTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { p -> LinkScanScreen(Modifier.padding(p)) }
+                Scaffold(modifier = Modifier.fillMaxSize()) { p -> LinkScanScreen(Modifier.padding(p), initial) }
             }
         }
     }
+    companion object { const val EXTRA_INPUT = "input" }
 }
 
 @Composable
-fun LinkScanScreen(modifier: Modifier) {
-    val context = LocalContext.current
+fun LinkScanScreen(modifier: Modifier, initial: String? = null) {    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var input by remember { mutableStateOf("") }
+    var input by remember { mutableStateOf(initial ?: "") }
     var result by remember { mutableStateOf<LinkScanResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     var msg by remember { mutableStateOf<String?>(null) }
@@ -73,6 +75,7 @@ fun LinkScanScreen(modifier: Modifier) {
             busy = false
         }
     }
+    LaunchedEffect(Unit) { if (!initial.isNullOrBlank()) runScan(initial, "link") }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {

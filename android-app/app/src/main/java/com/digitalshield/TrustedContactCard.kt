@@ -36,7 +36,7 @@ import com.digitalshield.data.TrustedContact
 import com.digitalshield.data.TrustedContactStore
 
 @Composable
-fun TrustedContactCard() {
+fun TrustedContactCard(onChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val muted = Color(0xFF6B7A8F)
     var contacts by remember { mutableStateOf(TrustedContactStore.loadAll(context)) }
@@ -44,7 +44,7 @@ fun TrustedContactCard() {
     var phone by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
 
-    fun refresh() { contacts = TrustedContactStore.loadAll(context) }
+    fun refresh() { contacts = TrustedContactStore.loadAll(context); onChanged() }
     fun add(n: String, p: String) {
         status = TrustedContactStore.add(context, TrustedContact(n.trim(), p.trim(), consent = true))
         refresh()

@@ -38,6 +38,12 @@ class SmsReceiver : BroadcastReceiver() {
                 if (!known || result.riskBand == "HIGH" || result.riskBand == "CRITICAL") {
                     ResultStore.add(result)
                 }
+                if (!known && result.riskBand == "CRITICAL") {
+                    ScamAlert.show(appContext, "Scam message detected",
+                        "This SMS shows ${result.indicators.size} scam signs, such as " +
+                                result.indicators.take(2).joinToString(" and ") { it.replace('_', ' ') } + ".",
+                        sender, result.riskBand, result.riskScore)
+                }
             } catch (e: Exception) {
                 Log.e("DigitalShield", "Analyze failed", e)
             } finally {

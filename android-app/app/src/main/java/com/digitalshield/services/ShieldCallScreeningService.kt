@@ -26,6 +26,9 @@ class ShieldCallScreeningService : CallScreeningService() {
                 Log.d("DigitalShield", "call $number band=${result.riskBand} known=$known stored=${result.stored}")
                 if (!known) CallStore.add(result)
                 if (result.riskBand != "LOW") NotificationHelper.showCallWarning(appContext, result)
+                if (result.riskBand != "LOW") ScamAlert.show(appContext, "Reported scam number calling",
+                    "This number appears in scam reports. You can hang up. Never share OTPs or pay.",
+                    number, result.riskBand, result.riskScore)
             } catch (e: Exception) {
                 Log.e("DigitalShield", "Call analysis failed", e)
             }
