@@ -6,7 +6,7 @@ from app.core.auth import require_investigator
 from app.services.threat_intel.lookup import normalize, report_ioc
 
 router = APIRouter(prefix="/threat-intel", tags=["threat-intel"])
-ALLOWED = {"phone", "email", "url", "upi", "domain"}
+ALLOWED = {"phone", "email", "url", "upi", "domain", "file"}
 
 class ReportIn(BaseModel):
     type: str

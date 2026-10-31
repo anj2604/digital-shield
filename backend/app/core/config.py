@@ -19,5 +19,6 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     mail_from: str = ""
+    vt_api_key: str = ""   # optional VirusTotal fingerprint lookups
 
 settings = Settings()

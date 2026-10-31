@@ -12,6 +12,7 @@ from app.api.v1.stats import router as stats_router
 from app.api.v1.links import router as links_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.osint import router as osint_router
+from app.api.v1.files import router as files_router
 from app.db.mongo import get_db
 from app.graph.service import get_graph
 from app.services.threat_intel.lookup import seed_defaults
@@ -48,5 +49,5 @@ def health():
     return {"status": "ok", "mongo": mongo}
 
 for r in (sms_router, calls_router, screenshots_router, evidence_router,
-          threat_intel_router, graph_router, cases_router, stats_router, links_router, auth_router, osint_router):
+          threat_intel_router, graph_router, cases_router, stats_router, links_router, auth_router, osint_router, files_router):
     app.include_router(r)
