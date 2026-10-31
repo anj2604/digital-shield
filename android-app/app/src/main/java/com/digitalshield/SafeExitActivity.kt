@@ -29,6 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.digitalshield.services.SafeExitActions
 import com.digitalshield.ui.theme.DigitalShieldTheme
+import android.net.Uri
+import androidx.compose.runtime.remember
+import com.digitalshield.data.TrustedContactStore
 
 class SafeExitActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,8 +85,21 @@ fun SafeExitScreen(modifier: Modifier, number: String?, band: String?, score: In
             Text("End this call now")
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { toast(SafeExitActions.alertTrustedContact(context, number, band, score)) },
-            modifier = Modifier.fillMaxWidth()) { Text("Alert my trusted contact") }
+        Button(onClick = { toast(SafeExitActions.alertTrustedContacts(context, number, band, score)) },
+            modifier = Modifier.fillMaxWidth()) { Text("Alert all my trusted contacts") }
+
+        val contacts = remember { TrustedContactStore.loadAll(context) }
+        if (contacts.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("Or call someone you trust right now:", fontWeight = FontWeight.Bold)
+            Text("Hang up the scam call first, then tap a name.", style = MaterialTheme.typography.bodySmall)
+            contacts.forEach { c ->
+                OutlinedButton(onClick = { SafeExitActions.callPerson(context, c.phone) },
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("📞 Call ${c.name.ifBlank { c.phone }}")
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = { SafeExitActions.dialHelpline(context) }, modifier = Modifier.fillMaxWidth()) {
             Text("Call cyber helpline 1930")

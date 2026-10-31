@@ -26,31 +26,42 @@ object SafeExitActions {
         } catch (e: SecurityException) { false }
     }
 
+    /** Alerts EVERY trusted contact with alerts switched on, at the same time. */
     @Suppress("DEPRECATION")
-    fun alertTrustedContact(context: Context, number: String?, band: String?, score: Int): String {
-        val contact = TrustedContactStore.load(context) ?: return "No trusted contact saved yet"
-        if (!contact.consent) return "Trusted-contact alerts are switched off"
+    fun alertTrustedContacts(context: Context, number: String?, band: String?, score: Int): String {
+        val people = TrustedContactStore.loadAll(context).filter { it.consent }
+        if (people.isEmpty()) return "No trusted contacts with alerts switched on"
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         val text = "Digital Shield alert: I may be on a scam call right now" +
                 (number?.let { " from $it" } ?: "") +
                 (if (band != null && score >= 0) " (risk $band, $score/100)" else "") +
-                " at $time. Please call me now."
+                " at $time. Please call me now. If you can't reach me, call the cyber helpline 1930."
+
         if (granted(context, Manifest.permission.SEND_SMS)) {
-            try {
-                val sms = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
-                else SmsManager.getDefault()
-                sms.sendMultipartTextMessage(contact.phone, null, sms.divideMessage(text), null, null)
-                return "Alert sent to ${contact.name.ifBlank { contact.phone }}"
-            } catch (e: Exception) { /* fall through to the message composer */ }
+            val sms = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
+            else SmsManager.getDefault()
+            var sent = 0
+            people.forEach {
+                try {
+                    sms.sendMultipartTextMessage(it.phone, null, sms.divideMessage(text), null, null)
+                    sent++
+                } catch (e: Exception) { /* try the next person */ }
+            }
+            if (sent > 0) return "Alert sent to $sent of ${people.size} trusted contact(s)"
         }
-        context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${contact.phone}"))
-            .putExtra("sms_body", text).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        return "Opened Messages to send the alert"
+        // Fallback: one message addressed to everyone, the user taps Send
+        context.startActivity(
+            Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + people.joinToString(";") { it.phone }))
+                .putExtra("sms_body", text).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        return "Opened Messages to alert ${people.size} contact(s)"
     }
 
-    fun dialHelpline(context: Context) {
-        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:1930")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    fun callPerson(context: Context, phone: String) {
+        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
+
+    fun dialHelpline(context: Context) = callPerson(context, "1930")
 
     fun openPortal(context: Context) {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://cybercrime.gov.in")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
