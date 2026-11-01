@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     mail_from: str = ""
-    vt_api_key: str = ""   # optional VirusTotal fingerprint lookups
+    vt_api_key: str = ""
+    whisper_model: str = "base"   # "small" is more accurate for Hindi but slower   # optional VirusTotal fingerprint lookups
 
 settings = Settings()
