@@ -48,6 +48,7 @@ import com.digitalshield.ui.*
 import com.digitalshield.ui.theme.DigitalShieldTheme
 import kotlinx.coroutines.launch
 import com.digitalshield.data.LiveCallStore
+import com.digitalshield.services.RecordingWatchService
 
 private const val MAX_SCREENSHOTS = 10
 
@@ -73,6 +74,7 @@ class MainActivity : ComponentActivity() {
         }
         handleShareIntent(intent)
         FileGuardActivity.resumeAutoScan(this)
+        RecordingWatchService.resume(this)
     }
 
     override fun onNewIntent(intent: Intent) {

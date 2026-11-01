@@ -18,7 +18,27 @@ data class ChunkResult(
     @SerializedName("live_risk") val liveRisk: LiveRisk
 )
 
+data class TimelineItem(
+    val seq: Int,
+    @SerializedName("offset_s") val offsetS: Int,
+    val transcript: String,
+    @SerializedName("score_after") val scoreAfter: Int,
+    @SerializedName("band_after") val bandAfter: String
+)
+
+data class RecordingResult(
+    @SerializedName("call_id") val callId: String,
+    val chunks: Int,
+    val timeline: List<TimelineItem>,
+    @SerializedName("live_risk") val liveRisk: LiveRisk
+)
 interface CallAudioApi {
+    @Multipart
+    @POST("calls/recording")
+    suspend fun uploadRecording(
+        @Part file: MultipartBody.Part,
+        @Part("phone_number") phoneNumber: RequestBody
+    ): RecordingResult
     @Multipart
     @POST("calls/{id}/chunks")
     suspend fun uploadChunk(

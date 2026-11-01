@@ -23,4 +23,6 @@ object CallRecordingPrefs {
     private fun p(c: Context) = c.getSharedPreferences("call_recording", Context.MODE_PRIVATE)
     fun enabled(c: Context) = p(c).getBoolean("enabled", false)
     fun setEnabled(c: Context, on: Boolean) = p(c).edit().putBoolean("enabled", on).apply()
+    fun autoRecordings(c: Context) = p(c).getBoolean("auto_recordings", false)
+    fun setAutoRecordings(c: Context, on: Boolean) = p(c).edit().putBoolean("auto_recordings", on).apply()
 }
