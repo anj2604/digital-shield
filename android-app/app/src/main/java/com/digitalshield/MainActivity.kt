@@ -47,6 +47,7 @@ import com.digitalshield.services.ScreenshotProcessor
 import com.digitalshield.ui.*
 import com.digitalshield.ui.theme.DigitalShieldTheme
 import kotlinx.coroutines.launch
+import com.digitalshield.data.LiveCallStore
 
 private const val MAX_SCREENSHOTS = 10
 
@@ -199,6 +200,7 @@ fun HomeScreen(
     val callResults by CallStore.calls.collectAsState()
     val shots by ScreenshotStore.shots.collectAsState()
     val busy by ScreenshotStore.busy.collectAsState()
+    val liveCall by LiveCallStore.state.collectAsState()
     var demoOpen by remember { mutableStateOf(false) }
 
     if (demoOpen) DemoMenu(onDismiss = { demoOpen = false }, onReplayIntro = onReplayIntro)
@@ -228,6 +230,8 @@ fun HomeScreen(
                 onLongPress = { demoOpen = true }   // hidden demo mode
             )
         }
+        val live = liveCall
+        if (live != null) item { LiveCallCard(live) }
 
         item {
             GradientTile("🚨", "Safe Exit", "On a suspicious call right now? Tap for help.",
@@ -256,8 +260,14 @@ fun HomeScreen(
             }
         }
         item {
-            GradientTile("📄", "Report incident", "Bundle your evidence into a PDF report",
-                Gradients.Indigo, Modifier.fillMaxWidth()) { open(ReportIncidentActivity::class.java) }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                GradientTile("📄", "Report incident", "Bundle your evidence into a PDF report",
+                    Gradients.Indigo, Modifier.weight(1f).height(150.dp)) { open(ReportIncidentActivity::class.java) }
+                GradientTile("🎙", "Call recording", "Record and check unknown calls live",
+                    listOf(Color(0xFFBE123C), Color(0xFF9333EA)), Modifier.weight(1f).height(150.dp)) {
+                    open(CallRecordingActivity::class.java)
+                }
+            }
         }
 
         item { TipCard() }

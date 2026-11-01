@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Digital Shield</string>
+    <string name="call_recorder_description">Lets Digital Shield record calls from unknown numbers in short chunks, so scam calls can be detected while they happen. Saved contacts are never recorded.</string>
 </resources>
