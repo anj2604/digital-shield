@@ -17,3 +17,7 @@ def sha256_text(text: str) -> str:
 
 def sms_fingerprint(sender: str, body: str, received_at: datetime) -> str:
     return sha256_text(f"{sender}\n{body}\n{iso_ms(received_at)}")
+
+
+def text_fingerprint(text: str, at: datetime) -> str:
+    return sha256_text(f"{text}\n{iso_ms(at)}")

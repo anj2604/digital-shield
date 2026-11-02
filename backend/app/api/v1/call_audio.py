@@ -11,6 +11,7 @@ from app.services.forensics.custody import log_custody
 from app.services.forensics.hashing import now_ms, sha256_bytes
 from app.services.nlp.ioc_extractor import extract_iocs
 from app.services.nlp.phrase_classifier import classify_text
+from app.services.nlp.spoken import normalize_spoken
 from app.services.risk_engine.scorer import calculate_risk, risk_band
 from app.services.speech.transcriber import get_transcriber
 from app.services.threat_intel.lookup import is_reported, learn_from
@@ -67,7 +68,7 @@ def upload_chunk(call_id: str, file: UploadFile = File(...), seq: int = Form(...
 
     file_id = gridfs.GridFS(db).put(data, filename=f"call_{call_id}_{seq}.wav",
                                     content_type=file.content_type or "audio/wav")
-    text = _with_temp(data, ".wav", stt.transcribe)
+    text = normalize_spoken(_with_temp(data, ".wav", stt.transcribe))
     found, iocs = classify_text(text), extract_iocs(text)
     cid = db.audio_chunks.insert_one({
         "call_id": call_id, "seq": seq, "offset_s": seq * duration_s, "duration_s": duration_s,
@@ -119,7 +120,7 @@ def upload_recording(file: UploadFile = File(...), phone_number: str = Form(""),
         windows.setdefault(int(start // WINDOW_S), []).append(text)
     timeline = []
     for w in sorted(windows):
-        text = " ".join(windows[w]).strip()
+        text = normalize_spoken(" ".join(windows[w]).strip())
         found, iocs = classify_text(text), extract_iocs(text)
         live = _apply(db, graph, call, found, iocs)
         db.audio_chunks.insert_one({
@@ -130,3 +131,18 @@ def upload_recording(file: UploadFile = File(...), phone_number: str = Form(""),
         timeline.append({"seq": w, "offset_s": w * WINDOW_S, "transcript": text,
                          "score_after": live["score"], "band_after": live["band"]})
     return {"call_id": str(call["_id"]), "chunks": len(timeline), "timeline": timeline, "live_risk": call["live_risk"]}
+
+
+@router.get("/recorded")
+def recorded_calls(limit: int = 100, db: Database = Depends(get_db)):
+    docs = db.calls.find({"$or": [{"chunk_count": {"$gt": 0}}, {"recording": {"$exists": True}}]}) \
+                   .sort("started_at", -1).limit(limit)
+    out = []
+    for d in docs:
+        cid = str(d["_id"])
+        first = db.audio_chunks.find_one({"call_id": cid, "transcript": {"$ne": ""}}, sort=[("seq", 1)])
+        out.append({"id": cid, "number": d["number"], "chunks": d.get("chunk_count", 0),
+                    "source": "device_recording" if d.get("recording") else "live",
+                    "risk_score": d["live_risk"]["score"], "risk_band": d["live_risk"]["band"],
+                    "started_at": d["started_at"], "preview": (first or {}).get("transcript", "")[:160]})
+    return out
