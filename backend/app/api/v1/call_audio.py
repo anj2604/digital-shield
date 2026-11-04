@@ -146,3 +146,54 @@ def recorded_calls(limit: int = 100, db: Database = Depends(get_db)):
                     "risk_score": d["live_risk"]["score"], "risk_band": d["live_risk"]["band"],
                     "started_at": d["started_at"], "preview": (first or {}).get("transcript", "")[:160]})
     return out
+
+
+# ---- FR14/FR17: investigators can listen to and download a call recording ----
+import io
+import wave
+from fastapi.responses import Response
+from app.core.auth import require_investigator
+from app.services.forensics.hashing import sha256_bytes
+
+AUDIO_TYPES = {".m4a": "audio/mp4", ".mp4": "audio/mp4", ".aac": "audio/aac", ".mp3": "audio/mpeg",
+               ".wav": "audio/wav", ".ogg": "audio/ogg", ".opus": "audio/ogg", ".amr": "audio/amr", ".3gp": "audio/3gpp"}
+
+@router.get("/{call_id}/audio")
+def call_audio_file(call_id: str, db: Database = Depends(get_db), user: dict = Depends(require_investigator)):
+    try:
+        call = db.calls.find_one({"_id": ObjectId(call_id)})
+    except InvalidId:
+        call = None
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    fs = gridfs.GridFS(db)
+    if call.get("recording"):                                    # the phone's own recording: one file
+        f = fs.get(call["recording"]["file_id"])
+        data = f.read()
+        intact = sha256_bytes(data) == call["recording"]["sha256"]
+        ext = os.path.splitext(f.filename or "")[1].lower()
+        media, name, parts = AUDIO_TYPES.get(ext, "application/octet-stream"), f"call_{call_id}{ext or '.audio'}", 1
+    else:                                                        # live recording: join the WAV chunks
+        chunks = list(db.audio_chunks.find({"call_id": call_id}).sort("seq", 1))
+        if not chunks:
+            raise HTTPException(status_code=404, detail="No audio stored for this call")
+        frames, params, intact = [], None, True
+        for c in chunks:
+            raw = fs.get(c["file_id"]).read()
+            intact = intact and sha256_bytes(raw) == c["sha256"]   # every chunk is re-checked
+            try:
+                with wave.open(io.BytesIO(raw)) as w:
+                    params = params or w.getparams()
+                    frames.append(w.readframes(w.getnframes()))
+            except (wave.Error, EOFError):
+                raise HTTPException(status_code=422, detail=f"Chunk {c['seq']} is not a WAV file")
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setparams(params)
+            w.writeframes(b"".join(frames))
+        data, media, name, parts = buf.getvalue(), "audio/wav", f"call_{call_id}.wav", len(chunks)
+    digest = sha256_bytes(data)
+    log_custody(db, "recording", call_id, "audio_accessed", digest, actor=user.get("email", "investigator"))
+    return Response(content=data, media_type=media, headers={
+        "Content-Disposition": f'inline; filename="{name}"',
+        "X-Integrity": "intact" if intact else "ALTERED", "X-Parts": str(parts), "X-Sha256": digest})
